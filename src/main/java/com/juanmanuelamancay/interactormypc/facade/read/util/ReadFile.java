@@ -1,0 +1,38 @@
+package com.juanmanuelamancay.interactormypc.facade.read.util;
+
+import com.juanmanuelamancay.interactormypc.facade.read.dto.RequestReadFile;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.ResponseReadFile;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+@Component
+public class ReadFile {
+    public ResponseReadFile readFileInMyPc(RequestReadFile requestReadFile) {
+        ResponseReadFile responseReadFile = new ResponseReadFile();
+
+        String route = requestReadFile.getRouteFile();
+        String fileName = requestReadFile.getFileName();
+        String type = requestReadFile.getType();
+
+        try {
+            Path filePath = Paths.get(route, fileName + "." + type);
+            if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
+                String content = new String(Files.readAllBytes(filePath));
+                responseReadFile.setContentFile(content);
+                responseReadFile.setOk(true);
+            } else {
+                responseReadFile.setOk(false);
+            }
+        } catch (IOException e) {
+            responseReadFile.setOk(false);
+            System.out.println("error: " + e.getMessage());
+        }
+
+        return responseReadFile;
+    }
+}
+
