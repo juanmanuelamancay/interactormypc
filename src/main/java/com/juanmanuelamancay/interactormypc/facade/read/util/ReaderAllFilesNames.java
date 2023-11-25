@@ -1,7 +1,7 @@
 package com.juanmanuelamancay.interactormypc.facade.read.util;
 
-import com.juanmanuelamancay.interactormypc.facade.read.dto.RequestReadAllFiles;
-import com.juanmanuelamancay.interactormypc.facade.read.dto.ResponseReadAllFiles;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.name.RequestToReadAllFilesNames;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.name.ResponseForReadAllFilesNames;
 import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class ReaderAllFiles {
-    public ResponseReadAllFiles readAllFilesInMyPc(RequestReadAllFiles requestReadAllFiles) {
-        ResponseReadAllFiles responseReadAllFiles = new ResponseReadAllFiles();
-        String route = requestReadAllFiles.getRouteFiles();
+public class ReaderAllFilesNames {
+    public ResponseForReadAllFilesNames readAllFilesInMyPc(RequestToReadAllFilesNames requestToReadAllFilesNames) {
+        ResponseForReadAllFilesNames responseForReadAllFilesNames = new ResponseForReadAllFilesNames();
+        String route = requestToReadAllFilesNames.getRoute();
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(route))) {
             List<String> fileNames = new ArrayList<>();
             for (Path path : directoryStream) {
@@ -24,14 +24,14 @@ public class ReaderAllFiles {
                     fileNames.add(fileNameWithoutExtension);
                 }
             }
-            responseReadAllFiles.setFilesNames(fileNames);
-            responseReadAllFiles.setOk(true);
+            responseForReadAllFilesNames.setFilesNames(fileNames);
+            responseForReadAllFilesNames.setSuccess(true);
         } catch (IOException e) {
-            responseReadAllFiles.setOk(false);
+            responseForReadAllFilesNames.setSuccess(false);
             System.out.println("error: " + e.getMessage());
         }
 
-        return responseReadAllFiles;
+        return responseForReadAllFilesNames;
     }
 
     private String removeFileExtension(Path path) {

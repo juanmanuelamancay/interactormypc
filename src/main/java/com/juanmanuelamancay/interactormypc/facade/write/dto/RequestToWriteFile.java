@@ -1,12 +1,10 @@
 package com.juanmanuelamancay.interactormypc.facade.write.dto;
 
+import com.juanmanuelamancay.interactormypc.facade.dto.Directory;
 import lombok.Data;
 
 @Data
-public class RequestWrite {
-    private String routeFile;
-    private String fileName;
-    private String type;
+public class RequestToWriteFile extends Directory {
     private String contentFile;
     private boolean reWrite;
 }

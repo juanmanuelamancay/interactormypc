@@ -1,13 +1,16 @@
 package com.juanmanuelamancay.interactormypc.facade;
 
-import com.juanmanuelamancay.interactormypc.facade.read.dto.RequestReadAllFiles;
-import com.juanmanuelamancay.interactormypc.facade.read.dto.RequestReadFile;
-import com.juanmanuelamancay.interactormypc.facade.read.dto.ResponseReadAllFiles;
-import com.juanmanuelamancay.interactormypc.facade.read.dto.ResponseReadFile;
-import com.juanmanuelamancay.interactormypc.facade.read.util.ReadFile;
-import com.juanmanuelamancay.interactormypc.facade.read.util.ReaderAllFiles;
-import com.juanmanuelamancay.interactormypc.facade.write.dto.RequestWrite;
-import com.juanmanuelamancay.interactormypc.facade.write.dto.ResponseWrite;
+import com.juanmanuelamancay.interactormypc.facade.delete.dto.RequestToDeleteFile;
+import com.juanmanuelamancay.interactormypc.facade.delete.dto.ResponseForDeleteFile;
+import com.juanmanuelamancay.interactormypc.facade.delete.util.Deleter;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.name.RequestToReadAllFilesNames;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.content.RequestToReadFileContent;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.name.ResponseForReadAllFilesNames;
+import com.juanmanuelamancay.interactormypc.facade.read.dto.content.ResponseForReadFileContent;
+import com.juanmanuelamancay.interactormypc.facade.read.util.ReaderFileContent;
+import com.juanmanuelamancay.interactormypc.facade.read.util.ReaderAllFilesNames;
+import com.juanmanuelamancay.interactormypc.facade.write.dto.RequestToWriteFile;
+import com.juanmanuelamancay.interactormypc.facade.write.dto.ResponseForWriteFile;
 import com.juanmanuelamancay.interactormypc.facade.write.util.Writer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,10 +25,13 @@ public class InteractorMyPc {
     private Writer writer;
 
     @Autowired
-    private ReaderAllFiles readerAllFiles;
+    private ReaderAllFilesNames readerAllFilesNames;
 
     @Autowired
-    private ReadFile readFile;
+    private ReaderFileContent readerFileContent;
+
+    @Autowired
+    private Deleter deleter;
 
     @GetMapping("")
     public String obtenerSaludo() {
@@ -33,35 +39,46 @@ public class InteractorMyPc {
     }
 
     @PostMapping("/writeFile")
-    public ResponseEntity<ResponseWrite> executeWrite(@RequestBody RequestWrite requestWrite) {
-        ResponseWrite responseWrite = writer.writeFileInMyPc(requestWrite);
+    public ResponseEntity<ResponseForWriteFile> executeWriteFile(@RequestBody RequestToWriteFile requestToWriteFile) {
+        ResponseForWriteFile responseForWriteFile = writer.writeFileInMyPc(requestToWriteFile);
 
-        if (responseWrite.isOk()) {
-            return new ResponseEntity<>(responseWrite, HttpStatus.OK);
+        if (responseForWriteFile.isSuccess()) {
+            return new ResponseEntity<>(responseForWriteFile, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(responseWrite, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(responseForWriteFile, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PostMapping("/readAllFiles")
-    public ResponseEntity<ResponseReadAllFiles> executeReadAllFiles(@RequestBody RequestReadAllFiles requestReadAllFiles) {
-        ResponseReadAllFiles responseReadAllFiles = readerAllFiles.readAllFilesInMyPc(requestReadAllFiles);
+    public ResponseEntity<ResponseForReadAllFilesNames> executeReadAllFiles(@RequestBody RequestToReadAllFilesNames requestToReadAllFilesNames) {
+        ResponseForReadAllFilesNames responseForReadAllFilesNames = readerAllFilesNames.readAllFilesInMyPc(requestToReadAllFilesNames);
 
-        if (responseReadAllFiles.isOk()) {
-            return new ResponseEntity<>(responseReadAllFiles, HttpStatus.OK);
+        if (responseForReadAllFilesNames.isSuccess()) {
+            return new ResponseEntity<>(responseForReadAllFilesNames, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(responseReadAllFiles, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(responseForReadAllFilesNames, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PostMapping("/readFile")
-    public ResponseEntity<ResponseReadFile> executeReadFile(@RequestBody RequestReadFile requestReadFile) {
-        ResponseReadFile responseReadFile = readFile.readFileInMyPc(requestReadFile);
+    public ResponseEntity<ResponseForReadFileContent> executeReadFile(@RequestBody RequestToReadFileContent requestToReadFileContent) {
+        ResponseForReadFileContent responseForReadFileContent = readerFileContent.readFileInMyPc(requestToReadFileContent);
 
-        if (responseReadFile.isOk()) {
-            return new ResponseEntity<>(responseReadFile, HttpStatus.OK);
+        if (responseForReadFileContent.isSuccess()) {
+            return new ResponseEntity<>(responseForReadFileContent, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(responseReadFile, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(responseForReadFileContent, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/deleteFile")
+    public ResponseEntity<ResponseForDeleteFile> executeDeleteFile(@RequestBody RequestToDeleteFile requestToDeleteFile) {
+        ResponseForDeleteFile responseForDeleteFile = deleter.deleteFileInMyPc(requestToDeleteFile);
+
+        if (responseForDeleteFile.isSuccess()) {
+            return new ResponseEntity<>(responseForDeleteFile, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(responseForDeleteFile, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
