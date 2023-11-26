@@ -17,6 +17,19 @@ import java.util.List;
 public class SearchContentInAllFiles {
     public ResponseForSearchContent serarchContentInMyPc(RequestToSearchContent requestToSearchContent){
         ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
+        responseForSearchContent.setSuccess(false);
+        responseForSearchContent.setFileNames(new ArrayList<>());
+
+        switch (requestToSearchContent.getSearchType()){
+            case "basic":
+                return serarchBasic(requestToSearchContent);
+            default:
+                return responseForSearchContent;
+        }
+    }
+
+    private ResponseForSearchContent serarchBasic (RequestToSearchContent requestToSearchContent){
+        ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
         List<String> fileNamesWithContent = new ArrayList<>();
 
         String route = requestToSearchContent.getRoute();

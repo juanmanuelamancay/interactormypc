@@ -6,4 +6,5 @@ import lombok.Data;
 @Data
 public class RequestToSearchContent extends DirectoryRoute {
     private String contentToSearch;
+    private String searchType;
 }
