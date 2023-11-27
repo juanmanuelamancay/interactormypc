@@ -107,8 +107,7 @@ public class InteractorMyPc {
 
     @PostMapping("/searchContent")
     public ResponseEntity<ResponseForSearchContent> executeCreateDirectory(@RequestBody RequestToSearchContent requestToSearchContent) {
-        ResponseForSearchContent responseForSearchContent = searchContentInAllFiles.serarchContentInMyPc(requestToSearchContent);
-
+        ResponseForSearchContent responseForSearchContent = searchContentInAllFiles.searchContentInMyPc(requestToSearchContent);
         if (responseForSearchContent.isSuccess()) {
             return new ResponseEntity<>(responseForSearchContent, HttpStatus.OK);
         } else {

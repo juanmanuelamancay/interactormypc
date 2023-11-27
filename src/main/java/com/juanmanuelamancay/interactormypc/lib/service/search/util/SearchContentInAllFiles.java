@@ -11,26 +11,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Component
 public class SearchContentInAllFiles {
-    public ResponseForSearchContent serarchContentInMyPc(RequestToSearchContent requestToSearchContent){
-        ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
-        responseForSearchContent.setSuccess(false);
-        responseForSearchContent.setFileNames(new ArrayList<>());
 
-        switch (requestToSearchContent.getSearchType()){
-            case "basic":
-                return serarchBasic(requestToSearchContent);
-            default:
-                return responseForSearchContent;
-        }
+    List<String> fileNamesWithCoincidence = new ArrayList<>();
+    int wordsPartsCounter = 0;
+    boolean existCoincidence;
+
+    public ResponseForSearchContent searchContentInMyPc(RequestToSearchContent requestToSearchContent){
+        return search(requestToSearchContent);
     }
 
-    private ResponseForSearchContent serarchBasic (RequestToSearchContent requestToSearchContent){
+
+    private ResponseForSearchContent search(RequestToSearchContent requestToSearchContent) {
+        fileNamesWithCoincidence = new ArrayList<>();
         ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
-        List<String> fileNamesWithContent = new ArrayList<>();
 
         String route = requestToSearchContent.getRoute();
         String contentToSearch = requestToSearchContent.getContentToSearch();
@@ -38,35 +36,94 @@ public class SearchContentInAllFiles {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(route))) {
             for (Path filePath : directoryStream) {
                 if (Files.isRegularFile(filePath)) {
-                    if (containsContent(filePath, contentToSearch)) {
-                        fileNamesWithContent.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+                    try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+                        String line;
+                        int lineNumber = 0; // con esta avriable pintamos el lugar encontrado si deseamos
+                        while ((line = reader.readLine()) != null) {
+                            lineNumber++;
+                            ArrayList<String> fileLineContentSeparateBySpace = separateBySpace(line.toLowerCase());
+                            ArrayList<String> contentToSearchSeparateBySpace = separateBySpace(contentToSearch.toLowerCase());
+
+                            ArrayList<String> fileLineContentWithoutEmptyParts = removeEmptyParts(fileLineContentSeparateBySpace);
+                            ArrayList<String> contentToSearchWithoutEmptyParts = removeEmptyParts(contentToSearchSeparateBySpace);
+
+                            if(requestToSearchContent.isIntense()){
+                                boolean passCoincidenceThreshold = searchIntense(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
+                                if(passCoincidenceThreshold){
+                                    fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+                                }
+                            }else{
+                                searchBasic(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
+                            }
+                        }
+                    } catch (IOException e) {
+                        System.out.println("Error al leer el contenido del archivo: " + e.getMessage());
                     }
                 }
             }
 
-            responseForSearchContent.setFileNames(fileNamesWithContent);
             responseForSearchContent.setSuccess(true);
+            responseForSearchContent.setFileNames(fileNamesWithCoincidence);
+
         } catch (IOException e) {
             responseForSearchContent.setSuccess(false);
             System.out.println("Error: " + e.getMessage());
         }
-
         return responseForSearchContent;
     }
 
-    private boolean containsContent(Path filePath, String contentToSearch) throws IOException {
-        String lowerCaseContentToSearch = contentToSearch.toLowerCase();
+    private void searchBasic(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch) {
+        for (String partFileLine : fileLine) {
+            for (String partContentToSearch : contentToSearch) {
+                if (partFileLine.contains(partContentToSearch)) {
+                    fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+                }
+            }
+        }
+    }
 
-        try (BufferedReader reader = Files.newBufferedReader(filePath)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String lowerCaseLine = line.toLowerCase();
-                if (lowerCaseLine.contains(lowerCaseContentToSearch)) {
+
+    private boolean searchIntense(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch){
+        int i = 0;
+        for(String fileLinePart: fileLine){
+            for (String contentToSearchPart: contentToSearch){
+                wordsPartsCounter = countCoincidencesByWord(fileLinePart, contentToSearchPart);
+                existCoincidence = validateCoincidenceThreshold(wordsPartsCounter, fileLinePart.length(), contentToSearchPart.length());
+                if(existCoincidence){
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private int countCoincidencesByWord(String partFileLine, String partContentToSearch){
+        int counter = 0;
+        String[] wordPartFileLine = partFileLine.split("");
+        String[] wordPartContentToSearch = partContentToSearch.split("");
+        for(String wordForFileLine: wordPartFileLine){
+            for (String wordForContentToSearch: wordPartContentToSearch){
+                if(wordForFileLine.contains(wordForContentToSearch)){
+                    counter++;
+                }
+            }
+        }
+        return counter;
+    }
+
+    private boolean validateCoincidenceThreshold(int wordsPartsCounter, int partFileLineLength, int partContentToSearchLength){
+        int absoluteDifference = Math.abs(partFileLineLength - partContentToSearchLength);
+        return wordsPartsCounter/2 > 0 && wordsPartsCounter/2 > absoluteDifference;
+    }
+
+    private ArrayList<String> separateBySpace(String sentence){
+        String[] separateWordsArray = sentence.split("\\s+");
+        return new ArrayList<>(Arrays.asList(separateWordsArray));
+    }
+
+    private ArrayList<String> removeEmptyParts(ArrayList<String> listToRemove){
+        listToRemove.removeIf(part -> part.trim().isEmpty());
+        return listToRemove;
     }
 
 }
