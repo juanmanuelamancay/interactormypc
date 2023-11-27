@@ -51,6 +51,7 @@ public class SearchContentInAllFiles {
                                 boolean passCoincidenceThreshold = searchIntense(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
                                 if(passCoincidenceThreshold){
                                     fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+                                    break;
                                 }
                             }else{
                                 searchBasic(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
