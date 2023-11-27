@@ -10,9 +10,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class SearchContentInAllFiles {
@@ -48,10 +46,9 @@ public class SearchContentInAllFiles {
                             ArrayList<String> contentToSearchWithoutEmptyParts = removeEmptyParts(contentToSearchSeparateBySpace);
 
                             if(requestToSearchContent.isIntense()){
-                                boolean passCoincidenceThreshold = searchIntense(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
+                                boolean passCoincidenceThreshold = searchIntense(fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
                                 if(passCoincidenceThreshold){
                                     fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
-                                    break;
                                 }
                             }else{
                                 searchBasic(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
@@ -64,7 +61,7 @@ public class SearchContentInAllFiles {
             }
 
             responseForSearchContent.setSuccess(true);
-            responseForSearchContent.setFileNames(fileNamesWithCoincidence);
+            responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithCoincidence));
 
         } catch (IOException e) {
             responseForSearchContent.setSuccess(false);
@@ -84,8 +81,7 @@ public class SearchContentInAllFiles {
     }
 
 
-    private boolean searchIntense(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch){
-        int i = 0;
+    private boolean searchIntense(ArrayList<String> fileLine, ArrayList<String> contentToSearch){
         for(String fileLinePart: fileLine){
             for (String contentToSearchPart: contentToSearch){
                 wordsPartsCounter = countCoincidencesByWord(fileLinePart, contentToSearchPart);
@@ -127,4 +123,8 @@ public class SearchContentInAllFiles {
         return listToRemove;
     }
 
+    public static List<String> removeDuplicates(List<String> inputList) {
+        Set<String> uniqueSet = new HashSet<>(inputList);
+        return new ArrayList<>(uniqueSet);
+    }
 }
