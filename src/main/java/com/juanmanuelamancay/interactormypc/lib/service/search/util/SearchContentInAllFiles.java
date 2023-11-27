@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,9 +35,11 @@ public class SearchContentInAllFiles {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(route))) {
             for (Path filePath : directoryStream) {
                 if (Files.isRegularFile(filePath)) {
-                    try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+                    //try (BufferedReader reader = Files.newBufferedReader(filePath)) {
+                    try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
                         String line;
                         int lineNumber = 0; // con esta avriable pintamos el lugar encontrado si deseamos
+
                         while ((line = reader.readLine()) != null) {
                             lineNumber++;
                             ArrayList<String> fileLineContentSeparateBySpace = separateBySpace(line.toLowerCase());
@@ -56,6 +59,7 @@ public class SearchContentInAllFiles {
                         }
                     } catch (IOException e) {
                         System.out.println("Error al leer el contenido del archivo: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
             }
