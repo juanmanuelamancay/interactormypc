@@ -15,18 +15,19 @@ import java.util.*;
 
 @Component
 public class SearchContentInAllFiles {
+    List<String> fileNamesWithMatching;
+    int lettersMatchedPerWord;
+    boolean matchOverTheThreshold;
 
-    List<String> fileNamesWithCoincidence = new ArrayList<>();
-    int wordsPartsCounter = 0;
-    boolean existCoincidence;
-
-    public ResponseForSearchContent searchContentInMyPc(RequestToSearchContent requestToSearchContent){
+    public ResponseForSearchContent searchContentInMyPc(RequestToSearchContent requestToSearchContent) {
         return search(requestToSearchContent);
     }
 
-
     private ResponseForSearchContent search(RequestToSearchContent requestToSearchContent) {
-        fileNamesWithCoincidence = new ArrayList<>();
+        fileNamesWithMatching = new ArrayList<>();
+        lettersMatchedPerWord = 0;
+        matchOverTheThreshold = false;
+
         ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
 
         String route = requestToSearchContent.getRoute();
@@ -35,27 +36,16 @@ public class SearchContentInAllFiles {
         try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(route))) {
             for (Path filePath : directoryStream) {
                 if (Files.isRegularFile(filePath)) {
-                    //try (BufferedReader reader = Files.newBufferedReader(filePath)) {
                     try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
                         String line;
-                        int lineNumber = 0; // con esta avriable pintamos el lugar encontrado si deseamos
-
                         while ((line = reader.readLine()) != null) {
-                            lineNumber++;
                             ArrayList<String> fileLineContentSeparateBySpace = separateBySpace(line.toLowerCase());
                             ArrayList<String> contentToSearchSeparateBySpace = separateBySpace(contentToSearch.toLowerCase());
 
-                            ArrayList<String> fileLineContentWithoutEmptyParts = removeEmptyParts(fileLineContentSeparateBySpace);
-                            ArrayList<String> contentToSearchWithoutEmptyParts = removeEmptyParts(contentToSearchSeparateBySpace);
+                            ArrayList<String> fileLineContentWithoutEmptyElements = removeEmptyElements(fileLineContentSeparateBySpace);
+                            ArrayList<String> contentToSearchWithoutEmptyElements = removeEmptyElements(contentToSearchSeparateBySpace);
 
-                            if(requestToSearchContent.isIntense()){
-                                boolean passCoincidenceThreshold = searchIntense(fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
-                                if(passCoincidenceThreshold){
-                                    fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
-                                }
-                            }else{
-                                searchBasic(filePath, fileLineContentWithoutEmptyParts,contentToSearchWithoutEmptyParts);
-                            }
+                            executeMainLogic(filePath, requestToSearchContent.isIntense(), fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
                         }
                     } catch (IOException e) {
                         System.out.println("Error al leer el contenido del archivo: " + e.getMessage());
@@ -65,7 +55,7 @@ public class SearchContentInAllFiles {
             }
 
             responseForSearchContent.setSuccess(true);
-            responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithCoincidence));
+            responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithMatching));
 
         } catch (IOException e) {
             responseForSearchContent.setSuccess(false);
@@ -74,23 +64,37 @@ public class SearchContentInAllFiles {
         return responseForSearchContent;
     }
 
+    private void executeMainLogic(Path filePath, boolean intense, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
+        if (intense) {
+            searchIntense(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+        } else {
+            searchBasic(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+        }
+    }
+
     private void searchBasic(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch) {
-        for (String partFileLine : fileLine) {
-            for (String partContentToSearch : contentToSearch) {
-                if (partFileLine.contains(partContentToSearch)) {
-                    fileNamesWithCoincidence.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+        for (String wordPerFileLine : fileLine) {
+            for (String wordPerContentToSearch : contentToSearch) {
+                if (wordPerFileLine.contains(wordPerContentToSearch)) {
+                    fileNamesWithMatching.add(filePath.getFileName().toString().replaceAll(".txt", ""));
                 }
             }
         }
     }
 
+    private void searchIntense(Path filePath, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
+        boolean passMatchThreshold = getMatchThreshold(fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+        if (passMatchThreshold) {
+            fileNamesWithMatching.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+        }
+    }
 
-    private boolean searchIntense(ArrayList<String> fileLine, ArrayList<String> contentToSearch){
-        for(String fileLinePart: fileLine){
-            for (String contentToSearchPart: contentToSearch){
-                wordsPartsCounter = countCoincidencesByWord(fileLinePart, contentToSearchPart);
-                existCoincidence = validateCoincidenceThreshold(wordsPartsCounter, fileLinePart.length(), contentToSearchPart.length());
-                if(existCoincidence){
+    private boolean getMatchThreshold(ArrayList<String> fileLine, ArrayList<String> contentToSearch){
+        for (String wordPerFileLine : fileLine) {
+            for (String wordPerContentToSearch : contentToSearch) {
+                lettersMatchedPerWord = countMatchingByLetter(wordPerFileLine, wordPerContentToSearch);
+                matchOverTheThreshold = validateMatchThreshold(lettersMatchedPerWord, wordPerFileLine.length(), wordPerContentToSearch.length());
+                if (matchOverTheThreshold) {
                     return true;
                 }
             }
@@ -98,13 +102,14 @@ public class SearchContentInAllFiles {
         return false;
     }
 
-    private int countCoincidencesByWord(String partFileLine, String partContentToSearch){
+    private int countMatchingByLetter(String wordPerFileLine, String wordPerContentToSearch) {
         int counter = 0;
-        String[] wordPartFileLine = partFileLine.split("");
-        String[] wordPartContentToSearch = partContentToSearch.split("");
-        for(String wordForFileLine: wordPartFileLine){
-            for (String wordForContentToSearch: wordPartContentToSearch){
-                if(wordForFileLine.contains(wordForContentToSearch)){
+        String[] lettersForEachWordOfTheFileLine = wordPerFileLine.split("");
+        String[] lettersForEachWordOfTheContentToSearch = wordPerContentToSearch.split("");
+
+        for (String fileLineLetter : lettersForEachWordOfTheFileLine) {
+            for (String contentToSearchLetter : lettersForEachWordOfTheContentToSearch) {
+                if (fileLineLetter.contains(contentToSearchLetter)) {
                     counter++;
                 }
             }
@@ -112,18 +117,18 @@ public class SearchContentInAllFiles {
         return counter;
     }
 
-    private boolean validateCoincidenceThreshold(int wordsPartsCounter, int partFileLineLength, int partContentToSearchLength){
+    private boolean validateMatchThreshold(int lettersPartsCounter, int partFileLineLength, int partContentToSearchLength) {
         int absoluteDifference = Math.abs(partFileLineLength - partContentToSearchLength);
-        return wordsPartsCounter/2 > 0 && wordsPartsCounter/2 > absoluteDifference;
+        return lettersPartsCounter / 2 > 0 && lettersPartsCounter / 2 > absoluteDifference;
     }
 
-    private ArrayList<String> separateBySpace(String sentence){
+    private ArrayList<String> separateBySpace(String sentence) {
         String[] separateWordsArray = sentence.split("\\s+");
         return new ArrayList<>(Arrays.asList(separateWordsArray));
     }
 
-    private ArrayList<String> removeEmptyParts(ArrayList<String> listToRemove){
-        listToRemove.removeIf(part -> part.trim().isEmpty());
+    private ArrayList<String> removeEmptyElements(ArrayList<String> listToRemove) {
+        listToRemove.removeIf(element -> element.trim().isEmpty());
         return listToRemove;
     }
 

@@ -4,9 +4,8 @@ import com.juanmanuelamancay.interactormypc.lib.service.write.dto.RequestToWrite
 import com.juanmanuelamancay.interactormypc.lib.service.write.dto.ResponseForWriteFile;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
 
 @Component
 public class Writer {
@@ -16,10 +15,12 @@ public class Writer {
         try {
             String filePath = requestToWriteFile.getRoute() + File.separator + requestToWriteFile.getFileName() + "." + requestToWriteFile.getType();
             String content = requestToWriteFile.getContentFile();
+            Charset charset = Charset.forName("UTF-8");
+
             // Verificar si el archivo ya existe
             File file = new File(filePath);
             if (file.exists()) {
-                if(!requestToWriteFile.isReWrite()){
+                if (!requestToWriteFile.isReWrite()) {
                     responseForWriteFile.setDuplicateFileName(true);
                     responseForWriteFile.setSuccess(true);
                     return responseForWriteFile;
@@ -27,11 +28,13 @@ public class Writer {
             }
 
             // El archivo no existe, proceder con la escritura
-            FileWriter fileWriter = new FileWriter(filePath);
-            if (content != null) {
-                fileWriter.write(content);
+            try (FileOutputStream fos = new FileOutputStream(filePath);
+                 OutputStreamWriter osw = new OutputStreamWriter(fos, charset)) {
+                if (content != null) {
+                    // Escribe el contenido en el archivo
+                    osw.write(content);
+                }
             }
-            fileWriter.close();
 
             responseForWriteFile.setSuccess(true);
             responseForWriteFile.setDuplicateFileName(false);
@@ -43,4 +46,3 @@ public class Writer {
         return responseForWriteFile;
     }
 }
-
