@@ -48,8 +48,8 @@ public class SearchContentInAllFiles {
 
                             ArrayList<String> fileLineContentWithoutEmptyElements = removeEmptyElements(fileLineContentSeparateBySpace);
                             ArrayList<String> contentToSearchWithoutEmptyElements = removeEmptyElements(contentToSearchSeparateBySpace);
-
-                            executeMainLogic(filePath, requestToSearchContent.isIntense(), fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+                            String filePatchWithoutExtension = filePath.getFileName().toString().replaceAll(".txt", "");
+                            executeMainLogic(filePatchWithoutExtension, requestToSearchContent.isIntense(), fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -58,49 +58,50 @@ public class SearchContentInAllFiles {
             }
 
             responseForSearchContent.setSuccess(true);
-            responseForSearchContent.setFileNames(removeDuplicates(reducePossibilities(fileNamesAndDistance)));
-
-            //responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithMatching));
+            if(requestToSearchContent.isIntense()){
+                responseForSearchContent.setFileNames(removeDuplicates(reducePossibilities(fileNamesAndDistance)));
+            }else{
+                responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithMatching));
+            }
         } catch (IOException e) {
             responseForSearchContent.setSuccess(false);
-            System.out.println("Error: " + e.getMessage());
         }
         return responseForSearchContent;
     }
 
-    private void executeMainLogic(Path filePath, boolean intense, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
+    private void executeMainLogic(String filePatchWithoutExtension, boolean intense, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
         if (intense) {
-            searchIntense(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+            searchIntense(filePatchWithoutExtension, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
         } else {
-            searchBasic(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+            searchBasic(filePatchWithoutExtension, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
         }
     }
 
-    private void searchBasic(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch) {
+    private void searchBasic(String filePatchWithoutExtension, ArrayList<String> fileLine, ArrayList<String> contentToSearch) {
         for (String wordPerFileLine : fileLine) {
             for (String wordPerContentToSearch : contentToSearch) {
                 if (wordPerFileLine.contains(wordPerContentToSearch)) {
-                    fileNamesWithMatching.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+                    fileNamesWithMatching.add(filePatchWithoutExtension);
                 }
             }
         }
     }
 
-    private void searchIntense(Path filePath, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
-        boolean passMatchThreshold = getMatchThreshold(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+    private void searchIntense(String filePatchWithoutExtension, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
+        boolean passMatchThreshold = getMatchThreshold(filePatchWithoutExtension, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
         if (passMatchThreshold) {
-            fileNamesWithMatching.add(filePath.getFileName().toString().replaceAll(".txt", ""));
+            fileNamesWithMatching.add(filePatchWithoutExtension);
         }
     }
 
-    private boolean getMatchThreshold(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch){
+    private boolean getMatchThreshold(String filePatchWithoutExtension, ArrayList<String> fileLine, ArrayList<String> contentToSearch){
         for (String wordPerFileLine : fileLine) {
             for (String wordPerContentToSearch : contentToSearch) {
                 lettersMatchedPerWord = countMatchingByLetter(wordPerFileLine, wordPerContentToSearch);
                 matchOverTheThreshold = validateMatchThreshold(lettersMatchedPerWord, wordPerFileLine.length(), wordPerContentToSearch.length());
                 if (matchOverTheThreshold) {
                     int distance = StringUtils.getLevenshteinDistance(wordPerFileLine, wordPerContentToSearch);
-                    fileNamesAndDistance.put(filePath.getFileName().toString(), distance);
+                    fileNamesAndDistance.put(filePatchWithoutExtension, distance);
                     return true;
                 }
             }
