@@ -2,6 +2,7 @@ package com.juanmanuelamancay.interactormypc.lib.service.search.util;
 
 import com.juanmanuelamancay.interactormypc.lib.service.search.dto.RequestToSearchContent;
 import com.juanmanuelamancay.interactormypc.lib.service.search.dto.ResponseForSearchContent;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -12,12 +13,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class SearchContentInAllFiles {
     List<String> fileNamesWithMatching;
     int lettersMatchedPerWord;
     boolean matchOverTheThreshold;
+    Map<String, Integer> fileNamesAndDistance;
 
     public ResponseForSearchContent searchContentInMyPc(RequestToSearchContent requestToSearchContent) {
         return search(requestToSearchContent);
@@ -27,6 +30,7 @@ public class SearchContentInAllFiles {
         fileNamesWithMatching = new ArrayList<>();
         lettersMatchedPerWord = 0;
         matchOverTheThreshold = false;
+        fileNamesAndDistance = new HashMap<>();
 
         ResponseForSearchContent responseForSearchContent = new ResponseForSearchContent();
 
@@ -48,15 +52,15 @@ public class SearchContentInAllFiles {
                             executeMainLogic(filePath, requestToSearchContent.isIntense(), fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
                         }
                     } catch (IOException e) {
-                        System.out.println("Error al leer el contenido del archivo: " + e.getMessage());
                         e.printStackTrace();
                     }
                 }
             }
 
             responseForSearchContent.setSuccess(true);
-            responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithMatching));
+            responseForSearchContent.setFileNames(removeDuplicates(reducePossibilities(fileNamesAndDistance)));
 
+            //responseForSearchContent.setFileNames(removeDuplicates(fileNamesWithMatching));
         } catch (IOException e) {
             responseForSearchContent.setSuccess(false);
             System.out.println("Error: " + e.getMessage());
@@ -83,18 +87,20 @@ public class SearchContentInAllFiles {
     }
 
     private void searchIntense(Path filePath, ArrayList<String> fileLineContentWithoutEmptyElements, ArrayList<String> contentToSearchWithoutEmptyElements) {
-        boolean passMatchThreshold = getMatchThreshold(fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
+        boolean passMatchThreshold = getMatchThreshold(filePath, fileLineContentWithoutEmptyElements, contentToSearchWithoutEmptyElements);
         if (passMatchThreshold) {
             fileNamesWithMatching.add(filePath.getFileName().toString().replaceAll(".txt", ""));
         }
     }
 
-    private boolean getMatchThreshold(ArrayList<String> fileLine, ArrayList<String> contentToSearch){
+    private boolean getMatchThreshold(Path filePath, ArrayList<String> fileLine, ArrayList<String> contentToSearch){
         for (String wordPerFileLine : fileLine) {
             for (String wordPerContentToSearch : contentToSearch) {
                 lettersMatchedPerWord = countMatchingByLetter(wordPerFileLine, wordPerContentToSearch);
                 matchOverTheThreshold = validateMatchThreshold(lettersMatchedPerWord, wordPerFileLine.length(), wordPerContentToSearch.length());
                 if (matchOverTheThreshold) {
+                    int distance = StringUtils.getLevenshteinDistance(wordPerFileLine, wordPerContentToSearch);
+                    fileNamesAndDistance.put(filePath.getFileName().toString(), distance);
                     return true;
                 }
             }
@@ -136,4 +142,21 @@ public class SearchContentInAllFiles {
         Set<String> uniqueSet = new HashSet<>(inputList);
         return new ArrayList<>(uniqueSet);
     }
+
+    private List<String> reducePossibilities(Map<String, Integer> fileNamesAndDistance) {
+        // Ordenar las entradas por valor
+        List<Map.Entry<String, Integer>> sortedEntries = fileNamesAndDistance.entrySet()
+                .stream()
+                .sorted(Comparator.comparingInt(Map.Entry::getValue))
+                .collect(Collectors.toList());
+
+        // Tomar los tres primeros
+        List<Map.Entry<String, Integer>> tresMenores = sortedEntries.subList(0, Math.min(3, sortedEntries.size()));
+
+        // Obtener los nombres de los tres menores
+        return tresMenores.stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
 }
